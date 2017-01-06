@@ -1,0 +1,58 @@
+provider "aws" {
+    region = "eu-west-1"
+}
+
+resource "aws_security_group" "<%= $group_name %>" {
+  name        = "<%= $group_name%>"
+  description = "<%= $group_name%>"
+  vpc_id      = "${var.vpc}"
+  tags { Name = "<%= $group_name %>" }
+
+<% $port_list.each do |port| %>
+  ingress {
+    from_port   = <%= port %>
+    to_port     = <%= port %>
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+<% end %>
+
+  # outbound internet access
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_instance" "<%= $box_name %>" {
+  # The connection block tells our provisioner how to
+  # communicate with the resource (instance)
+  connection {
+    # The default username for our AMI
+    user = "ubuntu"
+
+    # The connection will use the local SSH agent for authentication.
+  }
+
+  instance_type = "<%= $box_type %>"
+
+  ami    = "${var.aws_ami}"
+  availability_zone = "${var.aws_region}"
+
+  # The name of our SSH keypair
+  key_name = "${var.key_name}"
+
+  # Our Security group 
+  vpc_security_group_ids = ["${aws_security_group.<%= $group_name %>.id}"]
+
+  subnet_id = "${var.subnet}"
+
+  root_block_device  {
+    volume_type = "gp2"
+    volume_size = "<%= $vol_size %>"
+  }
+
+  tags { Name = "<%= $box_name%>" }
+}

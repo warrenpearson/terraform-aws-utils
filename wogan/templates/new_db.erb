@@ -1,0 +1,47 @@
+provider "aws" {
+    region = "eu-west-1"
+}
+
+resource "aws_security_group" "<%= $rds_sg_name %>" {
+  name        = "<%= $rds_sg_name %>"
+  description = "<%= $rds_sg_name %>"
+  vpc_id      = "${var.vpc}"
+  tags { Name = "<%= $rds_sg_name %>" }
+
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["${var.internal-network}/32"]
+  }
+
+  # outbound internet access
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_db_subnet_group" "<%= $rds_sng_name %>" {
+    name = "<%= $rds_sng_name %>"
+    description = "<%= $rds_sng_name %>"
+    subnet_ids = ["${var.subnet}", "${var.subnet-2}"]
+    tags {
+        Name = "<%= $rds_sng_name %>"
+    }
+}
+
+resource "aws_db_instance" "<%= $rds_name %>" {
+  identifier           = "<%= $rds_id %>"
+  allocated_storage    = 10
+  engine               = "mysql"
+  engine_version       = "5.6.21"
+  instance_class       = "db.t2.micro"
+  username             = "db_user"
+  password             = "db_pass"
+  db_subnet_group_name = "${aws_db_subnet_group.<%= $rds_sng_name %>.id}"
+  parameter_group_name = "default.mysql5.6"
+  vpc_security_group_ids = ["${aws_security_group.<%= $rds_sg_name %>.id}"]
+}
