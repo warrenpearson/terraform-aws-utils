@@ -1,0 +1,38 @@
+resource "aws_instance" "<%= $box_name %>" {
+  # The connection block tells our provisioner how to
+  # communicate with the resource (instance)
+  connection {
+    # The default username for our AMI
+    user = "ubuntu"
+
+    # The connection will use the local SSH agent for authentication.
+  }
+
+  instance_type = "t2.medium"
+
+  ami    = "${var.aws_ami}"
+  availability_zone = "${var.aws_region}"
+
+  # The name of our SSH keypair
+  key_name = "${var.key_name}"
+
+  # Our Security group 
+  vpc_security_group_ids = ["${aws_security_group.<%= $env_name %>_sg.id}"]
+
+  subnet_id = "${var.subnet}"
+
+  root_block_device  {
+    volume_type = "gp2"
+    volume_size = "30"
+  }
+
+  tags { Name = "<%= $box_name %>" }
+}
+
+resource "aws_route53_record" "<%= $box_name %>_dns" {
+  zone_id = "${var.route53_zone_id}"
+  name = "<%= $box_name %>-ssh.hostname.co.uk"
+  type = "A"
+  ttl = "300"
+  records = ["${aws_instance.<%= $box_name %>.public_ip}"]
+}
